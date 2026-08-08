@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:4000/api'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 export async function apiGet<T>(url: string): Promise<T> {
   const res = await fetch(`${API_URL}${url}`)
@@ -12,7 +12,6 @@ export async function apiPost<T>(url: string, data: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-
   if (!res.ok) throw new Error('Erreur API')
   return res.json()
 }
@@ -23,7 +22,6 @@ export async function apiPut<T>(url: string, data: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-
   if (!res.ok) throw new Error('Erreur API')
   return res.json()
 }
@@ -32,6 +30,5 @@ export async function apiDelete(url: string): Promise<void> {
   const res = await fetch(`${API_URL}${url}`, {
     method: 'DELETE',
   })
-
   if (!res.ok) throw new Error('Erreur API')
 }
