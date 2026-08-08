@@ -1,0 +1,37 @@
+const API_URL = 'http://localhost:4000/api'
+
+export async function apiGet<T>(url: string): Promise<T> {
+  const res = await fetch(`${API_URL}${url}`)
+  if (!res.ok) throw new Error('Erreur API')
+  return res.json()
+}
+
+export async function apiPost<T>(url: string, data: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${url}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+
+  if (!res.ok) throw new Error('Erreur API')
+  return res.json()
+}
+
+export async function apiPut<T>(url: string, data: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${url}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+
+  if (!res.ok) throw new Error('Erreur API')
+  return res.json()
+}
+
+export async function apiDelete(url: string): Promise<void> {
+  const res = await fetch(`${API_URL}${url}`, {
+    method: 'DELETE',
+  })
+
+  if (!res.ok) throw new Error('Erreur API')
+}

@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Cours {
+  id         Int           @id @default(autoincrement())
+  nom        String
+  anneeDebut Int           @default(2025)
+  classes    ClasseCours[]
+  interros   Interro[]
+  presences  Presence[]
+}
+
+model Classe {
+  id         Int           @id @default(autoincrement())
+  nom        String
+  anneeDebut Int           @default(2025)
+  eleves     Eleve[]
+  cours      ClasseCours[]
+  interros   Interro[]
+  presences  Presence[]
+}
+
+model ClasseCours {
+  classeId Int
+  coursId  Int
+  classe Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  cours  Cours  @relation(fields: [coursId], references: [id], onDelete: Cascade)
+  @@id([classeId, coursId])
+}
+
+model Horaire {
+  id         Int    @id @default(autoincrement())
+  nom        String
+  startDate  String
+  endDate    String
+  slots      Json
+  anneeDebut Int    @default(2025)
+}
+
+model Eleve {
+  id            Int        @id @default(autoincrement())
+  classeId      Int
+  nom           String
+  prenom        String
+  dateNaissance String
+  anneeDebut    Int        @default(2025)
+  classe    Classe     @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  notes     Note[]
+  presences Presence[]
+}
+
+model Interro {
+  id           Int    @id @default(autoincrement())
+  classeId     Int
+  coursId      Int
+  periode      Int
+  titre        String
+  nombrePoints Int
+  anneeDebut   Int    @default(2025)
+  classe Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  cours  Cours  @relation(fields: [coursId], references: [id], onDelete: Cascade)
+  notes  Note[]
+}
+
+model Note {
+  interroId     Int
+  eleveId       Int
+  pointsObtenus Float?
+  interro Interro @relation(fields: [interroId], references: [id], onDelete: Cascade)
+  eleve   Eleve   @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+  @@id([interroId, eleveId])
+}
+
+model Presence {
+  id              Int    @id @default(autoincrement())
+  eleveId         Int
+  classeId        Int
+  coursId         Int
+  date            String
+  periode         Int
+  periodeCotation Int
+  statut          String
+  anneeDebut      Int    @default(2025)
+  eleve  Eleve  @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+  classe Classe @relation(fields: [classeId], references: [id], onDelete: Cascade)
+  cours  Cours  @relation(fields: [coursId], references: [id], onDelete: Cascade)
+  @@unique([eleveId, classeId, coursId, date, periode, anneeDebut])
+}
+
+model EvenementCalendrier {
+  id          Int     @id @default(autoincrement())
+  titre       String
+  type        String
+  jourEntier  Boolean @default(false)
+  dateDebut   String
+  dateFin     String
+  heureDebut  String?
+  heureFin    String?
+  emplacement String?
+  description String?
+  couleur     String? @default("#10b981")
+  anneeDebut  Int     @default(2025)
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+}
+
+model NoteSemainier {
+  id         Int      @id @default(autoincrement())
+  horaireId  Int
+  date       String
+  day        String
+  period     Int
+  contenu    String
+  anneeDebut Int      @default(2025)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Parametres {
+  id            Int    @id @default(autoincrement())
+  anneeDebut    Int
+  periodeActive Int
+  anneesCreees  String
+}

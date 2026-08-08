@@ -1,0 +1,146 @@
+/**
+ * src/styles/settings.scss
+ * Classes CSS globales communes à tout le projet Mousse Academy
+ */
+
+// ── Fonds de pages ──────────────────────────────────────────
+.fond-page-clair {
+  background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+  min-height: 100vh;
+}
+
+.fond-page-sombre {
+  background: #0f172a;
+  min-height: 100vh;
+  color: white;
+}
+
+// ── Cartes ───────────────────────────────────────────────────
+.carte-claire {
+  background: white;
+  border: 1px solid #d1fae5;
+}
+
+.carte-sombre {
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+// ── Dialogues ────────────────────────────────────────────────
+.carte-dialogue {
+  border-radius: 16px;
+}
+
+// ── Titres de pages ──────────────────────────────────────────
+.titre-page {
+  font-size: 28px;
+  font-weight: 800;
+  color: #065f46;
+}
+
+.fond-page-sombre .titre-page { color: #f9fafb; }
+
+.sous-titre-page { color: #6b7280; }
+.fond-page-sombre .sous-titre-page { color: #cbd5e1; }
+
+// ── Titres de sections ────────────────────────────────────────
+.titre-section {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #065f46;
+}
+
+// ── Labels de champs ─────────────────────────────────────────
+.libelle-champ {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #065f46;
+  margin-bottom: 6px;
+}
+
+.carte-sombre .libelle-champ { color: #6ee7b7; }
+
+// ── Description ──────────────────────────────────────────────
+.description { color: #6b7280; font-size: 14px; }
+.carte-sombre .description { color: #94a3b8; }
+
+// ── Titres de tableaux ───────────────────────────────────────
+.titre-tableau { font-size: 17px; font-weight: 700; color: #065f46; }
+.carte-sombre .titre-tableau { color: #6ee7b7; }
+
+.sous-titre-tableau { font-size: 13px; color: #6b7280; }
+.carte-sombre .sous-titre-tableau { color: #94a3b8; }
+
+// ── Badges de statuts présences ──────────────────────────────
+.badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 12px; }
+
+.badge-p { background: #d1fae5; color: #065f46; }
+.badge-a { background: #fee2e2; color: #991b1b; }
+.badge-r { background: #ffedd5; color: #9a3412; }
+.badge-e { background: #dbeafe; color: #1e40af; }
+.badge-x { background: #f3e8ff; color: #6b21a8; }
+
+// ── Boutons statuts présences ────────────────────────────────
+.btn-statut {
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 2px solid transparent; font-weight: 800;
+  font-size: 14px; cursor: pointer; transition: all 0.15s;
+}
+
+.btn-statut.inactif { background: transparent; border-color: #d1d5db; color: #9ca3af; }
+.btn-statut.inactif:hover { border-color: #6b7280; color: #374151; }
+
+.btn-pres-p.actif { background: #10b981; border-color: #10b981; color: white; }
+.btn-pres-a.actif { background: #ef4444; border-color: #ef4444; color: white; }
+.btn-pres-r.actif { background: #f97316; border-color: #f97316; color: white; }
+.btn-pres-e.actif { background: #3b82f6; border-color: #3b82f6; color: white; }
+.btn-pres-x.actif { background: #a855f7; border-color: #a855f7; color: white; }
+
+// ── Boutons "Tous P / Tous A" ────────────────────────────────
+.bouton-tous-p { padding: 6px 12px; border-radius: 8px; border: none; background: #d1fae5; color: #065f46; font-weight: 600; cursor: pointer; }
+.bouton-tous-a { padding: 6px 12px; border-radius: 8px; border: none; background: #fee2e2; color: #991b1b; font-weight: 600; cursor: pointer; }
+
+// ── Boutons d'action listes ───────────────────────────────────
+.bouton-supprimer { color: #ef4444; }
+.bouton-modifier  { color: #2563eb; }
+.bouton-ajouter   { color: #10b981; }
+
+// ── Lignes de listes alternées ───────────────────────────────
+.ligne-eleve { min-height: 60px; }
+.ligne-paire.clair   { background: #f9fafb; }
+.ligne-impaire.clair { background: white; }
+.ligne-paire.sombre  { background: #1e293b; }
+.ligne-impaire.sombre { background: #243044; }
+
+.nom-eleve { font-weight: 600; font-size: 15px; }
+
+// ── Grille de sélection 3 colonnes ──────────────────────────
+.grille-selection {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .grille-selection { grid-template-columns: 1fr; }
+}
+
+// ── États vides ──────────────────────────────────────────────
+.etat-vide { color: #6b7280; font-style: italic; }
+
+// ── Légendes présences ───────────────────────────────────────
+.legende { display: flex; gap: 12px; flex-wrap: wrap; border-top: 1px solid #e5e7eb; }
+
+.item-legende { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 10px; }
+
+.legende-p    { background: #d1fae5; color: #065f46; }
+.legende-a    { background: #fee2e2; color: #991b1b; }
+.legende-r    { background: #ffedd5; color: #9a3412; }
+.legende-e    { background: #dbeafe; color: #1e40af; }
+.legende-x    { background: #f3e8ff; color: #6b21a8; }
+.legende-vide { background: #f3f4f6; color: #6b7280; }
+
+// ── Boutons de navigation présences ─────────────────────────
+.boutons-statut { display: flex; gap: 6px; }

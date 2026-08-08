@@ -1,0 +1,1 @@
+ALTER TABLE "Presence" ADD COLUMN "periodeCotation" INTEGER NOT NULL DEFAULT 1;
