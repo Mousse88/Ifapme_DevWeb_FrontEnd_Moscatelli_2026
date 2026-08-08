@@ -44,16 +44,4 @@ router.post('/login', async (req, res) => {
   }
 })
 
-// Route temporaire pour créer le compte admin — À SUPPRIMER APRÈS UTILISATION !
-router.post('/reset', async (req, res) => {
-  const { username, password } = req.body
-  const hash = await bcrypt.hash(password, 10)
-  const user = await prisma.user.upsert({
-    where: { username },
-    update: { passwordHash: hash },
-    create: { username, passwordHash: hash, role: 'admin' }
-  })
-  res.json({ message: 'OK', username: user.username })
-})
-
 export default router
