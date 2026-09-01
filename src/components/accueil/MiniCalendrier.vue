@@ -1,3 +1,8 @@
+<!--
+  Widget de la page d'accueil : version compacte du calendrier mensuel,
+  réutilise le composant CarteMoisCalendrier (mode "compact") pour afficher
+  le mois en cours avec les événements dessus.
+-->
 <template>
   <CarteMoisCalendrier
     :mois="moisCourant"
@@ -16,12 +21,15 @@ import CarteMoisCalendrier from "@/components/calendrierAnnuel/CarteMoisCalendri
 
 const store = useEcoleStore();
 
+// Charge les événements si pas déjà en mémoire.
 onMounted(async () => {
   if (store.evenements.length === 0) {
     await store.chargerEvenements();
   }
 });
 
+// Le composable utiliserCalendrier fait tout le travail de construction
+// de la grille du mois et de recherche des événements par date.
 const {
   nomsJours,
   construireMoisCourant,
