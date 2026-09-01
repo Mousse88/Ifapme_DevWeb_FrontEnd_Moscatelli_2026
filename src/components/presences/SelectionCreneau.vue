@@ -1,3 +1,8 @@
+<!--
+  Sélecteur de créneau pour l'encodage des présences : choix du jour,
+  du numéro de cours (période) et de la date, avec un indicateur "cours
+  en cours" si le créneau sélectionné correspond à l'heure actuelle.
+-->
 <template>
   <v-card class="mb-5" :class="estSombre ? 'carte-sombre' : 'carte-claire'" elevation="2">
     <v-card-text class="pa-5">
@@ -95,12 +100,16 @@ defineEmits<{
 const theme = useTheme()
 const estSombre = computed(() => theme.global.current.value.dark)
 
+// Ne propose que les jours pour lesquels l'horaire actif a effectivement
+// des cours prévus (pas la peine d'afficher un jour vide).
 const joursDisponibles = computed(() => {
   if (!props.horaireActif) return JOURS
   const joursAvecCours = new Set(props.horaireActif.slots.map(s => s.day))
   return JOURS.filter(j => joursAvecCours.has(j))
 })
 
+// Liste des périodes disponibles pour le jour choisi, avec un libellé
+// détaillé (heures + classe + cours) pour aider à identifier le bon créneau.
 const periodesDisponibles = computed(() => {
   if (!props.horaireActif || !props.jourSelectionne) return []
   const periodesJour = props.horaireActif.slots
@@ -117,6 +126,8 @@ const periodesDisponibles = computed(() => {
     })
 })
 
+// Le créneau (cours/classe/local) correspondant au jour+période sélectionnés,
+// ou null si aucun cours n'est prévu à ce moment-là.
 const creneauActif = computed(() => {
   if (!props.horaireActif || !props.jourSelectionne || !props.periodeSelectionnee) return null
   return props.horaireActif.slots.find(
@@ -124,6 +135,8 @@ const creneauActif = computed(() => {
   ) ?? null
 })
 
+// Vrai si la période sélectionnée correspond à l'heure actuelle
+// (affiche le badge "Cours en cours").
 const estPeriodeActuelle = computed(() => {
   if (!props.periodeSelectionnee) return false
   const d = new Date()
