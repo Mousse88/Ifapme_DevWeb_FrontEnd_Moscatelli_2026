@@ -1,3 +1,7 @@
+<!--
+  Popup de création/modification d'un élève : classe, nom, prénom et
+  date de naissance.
+-->
 <template>
   <v-dialog
     :model-value="modeleOuvert"
@@ -91,6 +95,10 @@ const eleveLocal = reactive({
   dateNaissance: "",
 });
 
+// À l'ouverture de la popup :
+// - en mode édition -> pré-remplit avec les infos de l'élève à modifier
+// - en mode création -> repart de zéro, en présélectionnant la classe
+//   déjà ouverte dans la liste (ou la première classe disponible sinon)
 watch(
   () => proprietes.modeleOuvert,
   (ouvert) => {
@@ -111,6 +119,9 @@ watch(
   },
 );
 
+// Garde le formulaire synchronisé si les props changent pendant l'édition
+// (utile si les données de l'élève sont mises à jour ailleurs pendant que
+// la popup est ouverte).
 watch(
   () => [
     proprietes.classeId,
