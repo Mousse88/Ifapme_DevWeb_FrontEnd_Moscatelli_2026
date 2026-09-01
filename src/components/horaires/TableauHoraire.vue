@@ -1,3 +1,10 @@
+<!--
+  Composant "grille horaire" réutilisé dans 2 contextes différents (prop "mode") :
+  - mode "edition" : utilisé sur la page Horaires pour construire/modifier
+    la grille (clic sur une cellule = ouvrir le formulaire d'affectation)
+  - mode "semainier" : utilisé sur la page Semainier en lecture, avec en plus
+    un champ de note libre par créneau (ce que le prof a fait ce jour-là)
+-->
 <template>
   <div class="conteneur-tableau" :class="estSombre ? 'sombre' : 'clair'">
     <table class="tableau">
@@ -83,19 +90,26 @@ const estSombre = computed(() => theme.global.current.value.dark)
 const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
 const periodes = Array.from({ length: 8 }, (_, i) => i + 1)
 
+// Cherche le créneau (cours/classe/local) prévu pour un jour+période donnés.
 function obtenirCreneau(jour: string, periode: number) {
   return proprietes.creneaux.find(c => c.day === jour && c.period === periode)
 }
 
+// En mode édition, cliquer sur une cellule ouvre le formulaire d'affectation
+// de cours pour ce créneau (géré par le composant parent). Sans effet en
+// mode "semainier" (lecture seule).
 function gererClicCellule(jour: string, periode: number) {
   if (proprietes.mode !== 'edition') return
   emit('modifier-cellule', { jour, periode })
 }
 
+// Clé unique identifiant une note pour un créneau (jour + période).
 function cleNote(jour: string, periode: number) {
   return `${jour}-${periode}`
 }
 
+// Met à jour la note d'un créneau (mode semainier) et prévient le parent
+// via v-model (update:notes) pour qu'il persiste le changement.
 function modifierNote(jour: string, periode: number, valeur: string) {
   emit('update:notes', { ...proprietes.notes, [cleNote(jour, periode)]: valeur })
 }
