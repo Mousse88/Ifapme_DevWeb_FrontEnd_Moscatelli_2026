@@ -1,3 +1,7 @@
+<!--
+  Simple carte cliquable en pointillés ("+ Ajouter un horaire") affichée
+  dans la grille des horaires, pour ouvrir le formulaire de création.
+-->
 <template>
   <v-card class="tuile-ajout" @click="$emit('ajouter')">
     <v-icon size="48">mdi-plus</v-icon>
