@@ -1,9 +1,17 @@
+<!--
+  Étape 2 du cahier de cotes, pour une classe donnée :
+  - si période = "annuel" -> affiche un tableau récapitulatif par cours,
+    avec les moyennes des 3 périodes + moyenne annuelle (accordéon par cours)
+  - sinon -> affiche d'abord une grille de choix de cours, puis une fois
+    le cours choisi, délègue l'affichage détaillé à TableauCotes.
+-->
 <template>
   <div>
     <div v-if="coursSelectionneId || periode === 'annuel'" class="mb-4">
       <BoutonApp variante="secondary" @click="retourAuxCours">← Retour aux cours</BoutonApp>
     </div>
 
+    <!-- Grille de sélection du cours (uniquement si aucun cours choisi et hors vue annuelle) -->
     <div v-if="!coursSelectionneId && periode !== 'annuel'" class="mb-6">
       <h2 class="text-h5 font-weight-bold mb-4">Choisis un cours</h2>
 
@@ -23,6 +31,7 @@
       </div>
     </div>
 
+    <!-- Vue annuelle : un accordéon par cours, dépliable pour voir le détail des moyennes -->
     <div v-if="periode === 'annuel'">
       <h2 class="text-h5 font-weight-bold mb-6">Aperçu annuel</h2>
 
@@ -71,6 +80,8 @@
       </div>
     </div>
 
+    <!-- Une fois un cours choisi (hors vue annuelle), on affiche le tableau
+         de cotes détaillé et éditable pour ce cours. -->
     <TableauCotes
       v-if="coursSelectionneId && periode !== 'annuel'"
       :classe-id="classeId"
@@ -95,6 +106,8 @@ const proprietes = defineProps<{
   cours: Cours[]
 }>()
 
+// Émis quand on clique "Retour aux cours" alors qu'on est en vue annuelle,
+// pour permettre au parent de revenir à la sélection de période.
 const emit = defineEmits<{ (e: 'retour-periode'): void }>()
 
 const store = useEcoleStore()
@@ -103,6 +116,7 @@ const { calculerMoyenneParPeriode, calculerMoyenneAnnuelle } = utiliserCotes()
 const coursSelectionneId = ref<number | null>(null)
 const elevesClasse = computed(() => store.obtenirElevesParClasse(proprietes.classeId))
 
+// Garde en mémoire quels accordéons de cours sont ouverts dans la vue annuelle.
 const coursOuverts = ref<Set<number>>(new Set())
 
 function estOuvert(coursId: number): boolean {
@@ -116,11 +130,15 @@ function toggleCours(coursId: number) {
   coursOuverts.value = s
 }
 
+// Si on change de classe, on repart de zéro : aucun cours sélectionné,
+// tous les accordéons refermés.
 watch(() => proprietes.classeId, () => {
   coursSelectionneId.value = null
   coursOuverts.value = new Set()
 })
 
+// Si on bascule vers la vue annuelle, on désélectionne le cours en cours
+// (pour éviter d'afficher TableauCotes en même temps que la vue annuelle).
 watch(() => proprietes.periode, (p) => {
   if (p === 'annuel') {
     coursSelectionneId.value = null
@@ -128,6 +146,8 @@ watch(() => proprietes.periode, (p) => {
   }
 })
 
+// Retour à la grille de choix des cours. Si on était en vue annuelle,
+// on prévient le parent pour qu'il revienne à la sélection de période.
 function retourAuxCours() {
   coursSelectionneId.value = null
   if (proprietes.periode === 'annuel') emit('retour-periode')
@@ -158,3 +178,4 @@ function retourAuxCours() {
 .chevron { transition: transform 0.25s ease; }
 .chevron-ouvert { transform: rotate(180deg); }
 </style>
+
