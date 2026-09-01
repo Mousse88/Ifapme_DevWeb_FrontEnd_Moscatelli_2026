@@ -1,3 +1,9 @@
+<!--
+  Page Présences : 2 onglets, "Encoder" (saisie des présences au jour le
+  jour) et "Récapitulatif" (vue d'ensemble par élève). Quand on bascule
+  vers le récapitulatif, on force d'abord la sauvegarde de l'encodage en
+  cours pour être sûr que le récapitulatif affiche des données à jour.
+-->
 <template>
   <PageLayout titre="📋 Présences" sous-titre="Encodage et récapitulatif des présences">
 
@@ -33,9 +39,14 @@ import EncodagePresences from '@/components/presences/EncodagePresences.vue'
 import RecapitulatifPresences from '@/components/presences/RecapitulatifPresences.vue'
 
 const ongletActif = ref('encoder')
+// Références vers les composants enfants pour pouvoir appeler leurs
+// méthodes exposées (enregistrer / recharger) depuis cette page.
 const encodageRef = ref<InstanceType<typeof EncodagePresences> | null>(null)
 const recapRef = ref<InstanceType<typeof RecapitulatifPresences> | null>(null)
 
+// En passant sur l'onglet "Récapitulatif" : force la sauvegarde de ce qui
+// vient d'être encodé, puis recharge le récapitulatif pour qu'il reflète
+// les tout derniers changements.
 async function onChangementOnglet(nouvelOnglet: string) {
   if (nouvelOnglet === 'recapitulatif') {
     if (encodageRef.value) await encodageRef.value.enregistrer()
