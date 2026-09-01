@@ -1,3 +1,8 @@
+<!--
+  Popup de création/modification d'une classe : son nom et les cours qui
+  lui sont associés. Sert aussi bien pour créer une nouvelle classe que
+  pour éditer une classe existante (classeEnEditionId détermine le mode).
+-->
 <template>
   <v-dialog
     :model-value="modeleOuvert"
@@ -65,12 +70,15 @@ defineEmits<{
 const champClasseRef = ref()
 const selectionCoursRef = ref()
 
+// Copie locale éditable des données de la classe (on ne modifie pas
+// directement les props, qui viennent du parent/du store).
 const classeLocale = reactive({
   nom: proprietes.nomClasse,
   coursIds: [...proprietes.coursIds],
 })
 
 // Réinitialise les valeurs à chaque ouverture du dialogue
+// et remet le focus automatiquement sur le champ "nom".
 watch(() => proprietes.modeleOuvert, (ouvert) => {
   if (ouvert) {
     classeLocale.nom = proprietes.nomClasse
@@ -79,6 +87,8 @@ watch(() => proprietes.modeleOuvert, (ouvert) => {
   }
 })
 
+// Referme automatiquement le menu déroulant du select multi-cours
+// après une sélection, pour une meilleure ergonomie.
 function fermerSelection() { selectionCoursRef.value?.blur() }
 </script>
 
