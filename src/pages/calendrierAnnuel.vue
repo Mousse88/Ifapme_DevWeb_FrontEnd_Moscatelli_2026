@@ -1,3 +1,8 @@
+<!--
+  Page Calendrier annuel : affiche les 12 mois de l'année scolaire
+  (août -> juillet) sous forme de mini-calendriers, avec la popup de
+  création/modification d'événement et une confirmation avant suppression.
+-->
 <template>
   <PageLayout :titre="'📅 Calendrier Annuel ' + libelleAnneeScolaire" sous-titre="Vue d'ensemble de l'année scolaire">
     <template #actions>
@@ -66,10 +71,15 @@ const libelleAnneeScolaire = computed(() => parametres.libelleAnneeScolaire)
 const anneeDebut = computed(() => parametres.anneeDebut)
 const anneeFin = computed(() => parametres.anneeDebut + 1)
 
+// L'année scolaire commence en août : on affiche les mois dans cet ordre
+// (août à décembre de l'année de début, puis janvier à juillet de l'année suivante)
+// plutôt que dans l'ordre calendaire classique (janvier -> décembre).
 const ordreMois: number[] = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7]
 
 const { nomsJours, construireMois, obtenirEvenementsPourDate, titreEvenement } = utiliserCalendrier(evenements)
 
+// Construit la grille de chaque mois affiché, en choisissant la bonne
+// année civile selon que le mois est avant ou après le passage à l'année suivante (août).
 const moisCalendrier = computed(() =>
   ordreMois.map(mois => {
     const annee = mois >= 8 ? anneeDebut.value : anneeFin.value
@@ -84,12 +94,14 @@ const evenementEnEdition = ref<EvenementCalendrier | null>(null)
 const dialogueConfirmation = ref(false)
 const messageConfirmation = ref('')
 
+// Ouvre la popup en mode "création" (aucun événement pré-rempli).
 function ouvrirDialogueCreation() {
   evenementEnEditionId.value = null
   evenementEnEdition.value = null
   dialogue.value = true
 }
 
+// Ouvre la popup en mode "modification", pré-remplie avec l'événement cliqué.
 function ouvrirDialogueModification(evenement: EvenementCalendrier) {
   evenementEnEditionId.value = evenement.id
   evenementEnEdition.value = evenement
@@ -102,12 +114,14 @@ function fermerDialogue() {
   evenementEnEdition.value = null
 }
 
+// Crée ou modifie l'événement selon le mode courant, puis referme la popup.
 async function enregistrerEvenement(donneesEvenement: Omit<EvenementCalendrier, 'id'>) {
   if (evenementEnEditionId.value) await store.modifierEvenement(evenementEnEditionId.value, donneesEvenement)
   else await store.ajouterEvenement(donneesEvenement)
   fermerDialogue()
 }
 
+// Ouvre la popup de confirmation avant de supprimer réellement l'événement.
 function demanderSuppressionEvenement() {
   if (!evenementEnEditionId.value) return
   messageConfirmation.value = `Supprimer l'événement "${evenementEnEdition.value?.titre}" ?`
@@ -127,6 +141,9 @@ function annulerSuppression() {
 }
 
 // Fix fuseau horaire : on passe une date locale sans conversion UTC
+// (new Date(dateIso).toISOString() décalerait la date selon le fuseau,
+// on construit donc la chaîne "YYYY-MM-DD" manuellement à partir des
+// composants locaux de la date).
 function allerVersSemaine(date: Date) {
   const dateIso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   router.push({ name: 'semainier', query: { date: dateIso } })
