@@ -1,66 +1,70 @@
 <!--
-  Widget de la page d'accueil qui affiche les 5 prochains rendez-vous
-  (hors congés) à venir, triés par date.
+  Étape 1 du cahier de cotes : grille de cartes permettant de choisir
+  la classe pour laquelle on veut consulter/encoder les cotes.
 -->
 <template>
-  <v-col cols="12" md="6">
-    <v-card class="pa-4" rounded="xl">
-      <h2 class="text-h6 mb-4">📌 Prochains rendez-vous</h2>
+  <div class="mb-6">
+    <h2 class="text-h5 font-weight-bold mb-4">Mes classes</h2>
 
-      <v-list v-if="prochainsEvenements.length">
-        <v-list-item
-          v-for="evenement in prochainsEvenements"
-          :key="evenement.id"
-        >
-          <v-list-item-title>{{ evenement.titre }}</v-list-item-title>
-          <v-list-item-subtitle>
-            {{ formaterDateLongue(evenement.dateDebut) }}
-            <span v-if="evenement.heureDebut">à {{ evenement.heureDebut }}</span>
-          </v-list-item-subtitle>
-        </v-list-item>
-      </v-list>
+    <div v-if="classes.length === 0" class="text-medium-emphasis">
+      Aucune classe disponible.
+    </div>
 
-      <p v-else class="etat-vide">Aucun rendez-vous à venir.</p>
-    </v-card>
-  </v-col>
+    <div v-else class="grille">
+      <v-card
+        v-for="classe in classes"
+        :key="classe.id"
+        class="pa-4 rounded-xl elevation-2 carte-tuile curseur"
+        :class="{ selectionnee: classeSelectionneeId === classe.id }"
+        @click="$emit('selectionner-classe', classe.id)"
+      >
+        <div class="text-h6 font-weight-bold">{{ classe.nom }}</div>
+
+        <div class="text-body-2 text-medium-emphasis">
+          {{ obtenirNomCours(classe.coursIds) }}
+        </div>
+      </v-card>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
-import { useEcoleStore } from "@/stores/ecole";
-import { aujourdHui } from "@/composables/utiliserDate";
+import type { Classe } from "@/stores/ecole";
 
-const store = useEcoleStore();
+// "obtenirNomCours" est passée en prop par le composant parent : elle
+// convertit une liste d'ids de cours en texte lisible (noms séparés par virgule).
+defineProps<{
+  classes: Classe[];
+  classeSelectionneeId: number | null;
+  obtenirNomCours: (coursIds: number[]) => string;
+}>();
 
-onMounted(async () => {
-  if (store.evenements.length === 0) {
-    await store.chargerEvenements();
-  }
-});
-
-// Exclut les congés (déjà affichés dans le widget DecompteConges), garde
-// seulement les événements à venir (dateDebut >= aujourd'hui), triés par
-// date croissante, et ne garde que les 5 premiers.
-const prochainsEvenements = computed(() => {
-  return store.evenements
-    .filter(
-      (evenement) =>
-        evenement.type !== "conge" &&
-        evenement.dateDebut >= aujourdHui(),
-    )
-    .sort((a, b) => a.dateDebut.localeCompare(b.dateDebut))
-    .slice(0, 5);
-});
-
-// Formate une date "YYYY-MM-DD" en format long lisible, ex: "23 mai 2026".
-function formaterDateLongue(valeur: string) {
-  return new Date(valeur).toLocaleDateString("fr-BE", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
+// Prévient le parent qu'une classe a été cliquée, pour passer à l'étape suivante.
+defineEmits<{
+  (e: "selectionner-classe", classeId: number): void;
+}>();
 </script>
 
 <style scoped>
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.carte-tuile {
+  transition: all 0.2s ease;
+}
+
+.carte-tuile:hover {
+  transform: translateY(-2px);
+}
+
+.curseur {
+  cursor: pointer;
+}
+
+.selectionnee {
+  border: 2px solid rgb(var(--v-theme-primary));
+}
 </style>
