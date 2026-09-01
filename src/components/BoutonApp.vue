@@ -1,9 +1,15 @@
+<!--
+  Bouton générique réutilisé dans toute l'application, avec 4 variantes
+  de couleur (primary/secondary/success/echec) et un état "loading"
+  qui affiche un spinner à la place de l'icône.
+-->
 <template>
   <button
     :class="['bouton-app', `bouton-${variante}`, { 'bouton-desactive': disabled }]"
     :disabled="disabled || loading"
     @click="$emit('click')"
   >
+    <!-- Spinner affiché pendant le chargement, sinon icône normale si fournie -->
     <v-icon v-if="loading" class="mr-2" size="18">mdi-loading mdi-spin</v-icon>
     <v-icon v-else-if="icone" class="mr-2" size="18">{{ icone }}</v-icon>
     <slot />
