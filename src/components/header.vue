@@ -1,12 +1,20 @@
+<!--
+  Barre de navigation principale de l'application : barre du haut
+  (titre, utilisateur connecté, bouton mode sombre) + volet latéral
+  avec les liens vers toutes les pages. Le comportement s'adapte selon
+  qu'on est sur mobile (volet temporaire qui se replie) ou desktop
+  (volet permanent, "rétractable" en mode icônes seules).
+-->
 <template>
   <!-- BARRE DU HAUT -->
   <v-app-bar :elevation="2" :class="['barre-application', estSombre ? 'sombre' : 'clair']">
 
-    <!-- Bouton toggle volet (mobile uniquement) -->
+    <!-- Bouton toggle volet (mobile uniquement) : ouvre/ferme le menu latéral -->
     <v-btn v-if="mobile" icon @click="voletOuvert = !voletOuvert" class="bouton-icone-navigation ml-1">
       <v-icon>mdi-menu</v-icon>
     </v-btn>
 
+    <!-- Titre de l'appli, cliquable pour revenir à l'accueil -->
     <v-app-bar-title class="titre">
       <RouterLink to="/" class="lien-titre">Mousse Academy</RouterLink>
     </v-app-bar-title>
@@ -21,7 +29,7 @@
       </v-btn>
     </template>
 
-    <!-- Mode sombre -->
+    <!-- Bouton pour basculer entre thème clair et sombre -->
     <v-btn icon @click="basculerTheme" class="bouton-theme ml-1">
       <v-icon size="22">
         {{ estSombre ? "mdi-white-balance-sunny" : "mdi-weather-night" }}
@@ -53,7 +61,8 @@
 
     <v-divider v-if="!mobile" />
 
-    <!-- Liens navigation -->
+    <!-- Liens navigation : générés depuis le tableau elementsNavigation.
+         Sur desktop rétracté, on n'affiche que les icônes avec une infobulle. -->
     <v-list density="compact" nav>
       <v-list-item
         v-for="element in elementsNavigation"
@@ -77,7 +86,7 @@
 
     <template #append>
       <v-divider />
-      <!-- Déconnexion mobile -->
+      <!-- Déconnexion mobile (sur desktop, le bouton est dans la barre du haut) -->
       <v-list density="compact" nav v-if="mobile && authStore.isAuthenticated">
         <v-list-item
           prepend-icon="mdi-account"
@@ -99,24 +108,31 @@ import { useDisplay, useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+// useDisplay() de Vuetify nous dit si on est sur un écran mobile ou non,
+// pour adapter le comportement du volet (temporaire vs permanent).
 const { mobile } = useDisplay()
 const theme = useTheme()
 const router = useRouter()
 const authStore = useAuthStore()
 
 const estSombre = computed(() => theme.global.current.value.dark)
+// Sur mobile le volet démarre fermé, sur desktop il démarre ouvert.
 const voletOuvert = ref(!mobile.value)
+// Mode "rail" desktop : le volet est réduit à des icônes seules.
 const voletRetracte = ref(false)
 
+// Bascule entre le thème Vuetify "light" et "dark".
 function basculerTheme() {
   theme.change(estSombre.value ? 'light' : 'dark')
 }
 
+// Déconnecte l'utilisateur (vide le store auth) et le renvoie sur /login.
 function deconnexion() {
   authStore.logout()
   router.push('/login')
 }
 
+// Liste des liens affichés dans le menu latéral (libellé, route, icône).
 const elementsNavigation = [
   { libelle: 'Accueil',           vers: '/',                  icone: 'mdi-home' },
   { libelle: 'Cahier de cotes',   vers: '/cahier-de-cotes',   icone: 'mdi-notebook' },
