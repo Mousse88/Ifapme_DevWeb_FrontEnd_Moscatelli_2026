@@ -1,3 +1,8 @@
+<!--
+  Sélecteur de période (1, 2, 3 ou vue "annuel") sous forme de boutons,
+  utilisé en haut du cahier de cotes. La période active (celle en cours
+  dans l'établissement) est mise en évidence avec un badge.
+-->
 <template>
   <div class="conteneur-periodes">
     <button
@@ -18,6 +23,8 @@ import { useParametresStore } from '@/stores/parametres'
 
 type ValeurPeriode = number | 'annuel'
 
+// defineModel permet au parent d'utiliser v-model directement sur ce composant
+// pour connaître/changer la période sélectionnée.
 const valeurModele = defineModel<ValeurPeriode>()
 const parametres = useParametresStore()
 
