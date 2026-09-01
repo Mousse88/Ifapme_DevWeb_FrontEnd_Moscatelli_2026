@@ -1,3 +1,7 @@
+<!--
+  Widget de la page d'accueil qui affiche les 5 prochains rendez-vous
+  (hors congés) à venir, triés par date.
+-->
 <template>
   <v-col cols="12" md="6">
     <v-card class="pa-4" rounded="xl">
@@ -34,6 +38,9 @@ onMounted(async () => {
   }
 });
 
+// Exclut les congés (déjà affichés dans le widget DecompteConges), garde
+// seulement les événements à venir (dateDebut >= aujourd'hui), triés par
+// date croissante, et ne garde que les 5 premiers.
 const prochainsEvenements = computed(() => {
   return store.evenements
     .filter(
@@ -45,6 +52,7 @@ const prochainsEvenements = computed(() => {
     .slice(0, 5);
 });
 
+// Formate une date "YYYY-MM-DD" en format long lisible, ex: "23 mai 2026".
 function formaterDateLongue(valeur: string) {
   return new Date(valeur).toLocaleDateString("fr-BE", {
     day: "2-digit",
