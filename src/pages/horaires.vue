@@ -1,3 +1,9 @@
+<!--
+  Page Horaires : liste des horaires existants (mode "liste"), et édition
+  détaillée d'un horaire choisi (mode "planning") avec sa grille de créneaux
+  cliquable. Les modifications (nom/dates/cellules) sont sauvegardées
+  automatiquement (avec un léger debounce) sans bouton "Enregistrer" explicite.
+-->
 <template>
   <PageLayout titre="📅 Horaires" sous-titre="Gestion des horaires de cours">
     <template v-if="mode === 'planning'" #actions>
@@ -112,11 +118,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <v-snackbar v-model="snackbarVisible" :timeout="2000" color="success" location="bottom right">
-      <v-icon class="mr-2">mdi-check-circle</v-icon>
-      Horaire sauvegardé !
-    </v-snackbar>
   </PageLayout>
 </template>
 
@@ -131,7 +132,11 @@ import TableauHoraire from '@/components/horaires/TableauHoraire.vue'
 
 const store = useEcoleStore()
 
+// "liste" = grille des horaires existants ; "planning" = édition détaillée
+// d'un horaire précis (nom/dates + grille de créneaux).
 const mode = ref<'liste' | 'planning'>('liste')
+// Copie locale éditable de l'horaire ouvert (pour ne pas modifier le store
+// directement à chaque frappe, et permettre le debounce de sauvegarde).
 const horaireActuel = ref<Horaire | null>(null)
 const dialogueCreation = ref(false)
 const dialogueModification = ref(false)
@@ -139,13 +144,17 @@ const dialogueConfirmation = ref(false)
 const sauvegarde = ref(false)
 const snackbarVisible = ref(false)
 
+// Gestion du debounce de sauvegarde
 let timerSauvegarde: ReturnType<typeof setTimeout> | null = null
 
 const formulaire = ref({ nom: '', dateDebut: '', dateFin: '' })
 const formulaireValide = computed(() => formulaire.value.nom.trim().length > 0)
 
+// Le créneau actuellement en cours d'édition dans la popup "Bloc horaire".
 const celluleSelectionnee = ref<CreneauHoraire>({ day: '', period: 1, classe: '', cours: '', local: '' })
 
+// Vrai si un créneau existe déjà à cet emplacement (jour+période) -> permet
+// d'afficher le bouton "Supprimer" dans la popup uniquement dans ce cas.
 const celluleExiste = computed(() =>
   horaireActuel.value?.slots.some(c =>
     c.day === celluleSelectionnee.value.day &&
@@ -155,6 +164,7 @@ const celluleExiste = computed(() =>
 
 const classesTri = computed(() => store.obtenirClassesTries())
 
+// Ne propose que les cours réellement associés à la classe choisie dans la popup.
 const coursDisponiblesPourClasse = computed(() => {
   const classe = store.classes.find(c => c.nom === celluleSelectionnee.value.classe)
   if (!classe) return []
@@ -164,6 +174,9 @@ const coursDisponiblesPourClasse = computed(() => {
     .sort((a, b) => a.localeCompare(b, 'fr'))
 })
 
+// Sauvegarde automatique "debouncée" : attend 800ms sans nouvelle frappe
+// avant d'envoyer la requête, pour éviter de spammer l'API à chaque caractère
+// tapé dans les champs nom/dates de l'horaire.
 async function sauvegardeAuto() {
   if (!horaireActuel.value?.nom.trim()) return
   if (timerSauvegarde) clearTimeout(timerSauvegarde)
@@ -182,6 +195,7 @@ function fermerDialogueCreation() {
   formulaire.value = { nom: '', dateDebut: '', dateFin: '' }
 }
 
+// Crée un horaire vide (sans créneaux) puis recharge la liste.
 async function creerHoraire() {
   if (!formulaireValide.value) return
   try {
@@ -198,6 +212,9 @@ async function creerHoraire() {
   }
 }
 
+// Ouvre un horaire en mode édition. On fait une copie profonde (des slots
+// aussi) pour ne pas modifier accidentellement les données du store avant
+// que la sauvegarde ne soit confirmée.
 function ouvrirHoraire(horaire: Horaire) {
   horaireActuel.value = { ...horaire, slots: horaire.slots.map(s => ({ ...s })) }
   mode.value = 'planning'
@@ -208,6 +225,8 @@ function retourListe() {
   horaireActuel.value = null
 }
 
+// Clic sur une cellule de la grille : ouvre la popup, pré-remplie si un
+// créneau existe déjà à cet emplacement, sinon vide (mode création).
 function modifierCellule(jour: string, periode: number) {
   const existante = horaireActuel.value?.slots.find(c => c.day === jour && c.period === periode)
   celluleSelectionnee.value = existante
@@ -216,6 +235,9 @@ function modifierCellule(jour: string, periode: number) {
   dialogueModification.value = true
 }
 
+// Ajoute ou remplace le créneau à cet emplacement dans la copie locale,
+// puis déclenche une sauvegarde immédiate (sans debounce, contrairement
+// aux champs texte, car c'est une action ponctuelle et non une frappe continue).
 async function enregistrerCellule() {
   if (!horaireActuel.value) return
   const index = horaireActuel.value.slots.findIndex(c =>
@@ -228,6 +250,7 @@ async function enregistrerCellule() {
   await enregistrerHoraireActuel(false)
 }
 
+// Retire le créneau sélectionné de la grille et sauvegarde.
 function supprimerCellule() {
   if (!horaireActuel.value) return
   horaireActuel.value.slots = horaireActuel.value.slots.filter(c =>
@@ -237,6 +260,9 @@ function supprimerCellule() {
   enregistrerHoraireActuel(false)
 }
 
+// Envoie l'état actuel de l'horaire édité à l'API. Le paramètre
+// "afficherSnackbar" permet de ne montrer la confirmation visuelle que
+// lors d'une sauvegarde explicite (pas à chaque auto-save silencieux).
 async function enregistrerHoraireActuel(afficherSnackbar = true) {
   if (!horaireActuel.value?.nom.trim()) return
   sauvegarde.value = true
@@ -257,6 +283,7 @@ function demanderSuppressionHoraire() {
   dialogueConfirmation.value = true
 }
 
+// Supprime définitivement l'horaire et revient à la liste.
 async function confirmerSuppression() {
   if (!horaireActuel.value) return
   try {
