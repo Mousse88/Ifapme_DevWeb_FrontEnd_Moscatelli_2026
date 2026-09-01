@@ -1,3 +1,7 @@
+<!--
+  Étape 1 du cahier de cotes : grille de cartes permettant de choisir
+  la classe pour laquelle on veut consulter/encoder les cotes.
+-->
 <template>
   <div class="mb-6">
     <h2 class="text-h5 font-weight-bold mb-4">Mes classes</h2>
@@ -27,12 +31,15 @@
 <script setup lang="ts">
 import type { Classe } from "@/stores/ecole";
 
+// "obtenirNomCours" est passée en prop par le composant parent : elle
+// convertit une liste d'ids de cours en texte lisible (noms séparés par virgule).
 defineProps<{
   classes: Classe[];
   classeSelectionneeId: number | null;
   obtenirNomCours: (coursIds: number[]) => string;
 }>();
 
+// Prévient le parent qu'une classe a été cliquée, pour passer à l'étape suivante.
 defineEmits<{
   (e: "selectionner-classe", classeId: number): void;
 }>();
