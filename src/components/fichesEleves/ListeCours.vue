@@ -1,3 +1,7 @@
+<!--
+  Liste des cours sous forme de cartes simples, avec le nombre de classes
+  qui suivent chaque cours, et des actions modifier/supprimer.
+-->
 <template>
   <section class="mb-10">
     <h2 class="titre-section">📖 Mes cours</h2>
