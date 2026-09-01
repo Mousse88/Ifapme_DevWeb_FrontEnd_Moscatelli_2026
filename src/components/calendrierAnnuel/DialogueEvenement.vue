@@ -1,3 +1,9 @@
+<!--
+  Popup de création/modification d'un événement du calendrier annuel
+  (congé, formation, réunion...). Le même formulaire sert pour les deux
+  cas : s'il y a un evenementEnEditionId, on est en mode modification
+  (avec bouton Supprimer), sinon en mode création.
+-->
 <template>
   <v-dialog
     :model-value="modeleOuvert"
@@ -123,6 +129,7 @@ const emit = defineEmits<{
 const parametres = useParametresStore()
 
 // Limites de dates : 1er août anneeDebut → 31 juillet anneeFin
+// (on ne peut pas créer un événement en dehors de l'année scolaire en cours).
 const dateMin = computed(() => `${parametres.anneeDebut}-08-01`)
 const dateMax = computed(() => `${parametres.anneeDebut + 1}-07-31`)
 
@@ -135,6 +142,8 @@ const typesEvenements = [
 
 const couleurs = ['#10b981', '#ef4444', '#2563eb', '#f97316', '#a855f7', '#6b7280']
 
+// État local du formulaire, séparé des props pour pouvoir être édité
+// librement avant validation (on ne modifie pas directement l'événement du store).
 const formulaire = reactive({
   titre: '',
   type: 'conge',
@@ -148,12 +157,17 @@ const formulaire = reactive({
   couleur: '#10b981',
 })
 
+// Si l'utilisateur change la date de début et que la date de fin devient
+// incohérente (vide ou antérieure), on l'aligne automatiquement sur le début.
 function onDateDebutChange(nouvelleDate: string) {
   if (!formulaire.dateFin || formulaire.dateFin < nouvelleDate) {
     formulaire.dateFin = nouvelleDate
   }
 }
 
+// À chaque ouverture de la popup, on réinitialise le formulaire puis,
+// si un événement est fourni en prop (mode édition), on pré-remplit
+// les champs avec ses valeurs actuelles.
 watch(
   () => proprietes.modeleOuvert,
   (ouvert) => {
@@ -174,6 +188,7 @@ watch(
   }
 )
 
+// Remet le formulaire à ses valeurs vides par défaut (mode création).
 function reinitialiserFormulaire() {
   formulaire.titre = ''
   formulaire.type = 'conge'
@@ -187,6 +202,8 @@ function reinitialiserFormulaire() {
   formulaire.couleur = '#10b981'
 }
 
+// Valide les champs obligatoires et la cohérence des dates avant d'émettre
+// l'événement "enregistrer" avec les données prêtes à envoyer à l'API.
 function validerFormulaire() {
   if (!formulaire.titre.trim()) {
     alert('Le titre est obligatoire')
