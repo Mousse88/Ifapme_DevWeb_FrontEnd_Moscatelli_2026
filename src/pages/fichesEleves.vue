@@ -1,3 +1,9 @@
+<!--
+  Page Fiches élèves : gère la création/modification/suppression des cours,
+  des classes et des élèves, en orchestrant les listes (ListeCours,
+  ListeClasses) et les popups d'édition (DialogueCours, DialogueClasse,
+  DialogueEleve), avec une confirmation générique avant toute suppression.
+-->
 <template>
   <PageLayout titre="📚 Fiches élèves" sous-titre="Gestion des cours, classes et étudiants">
     <template #actions>
@@ -87,20 +93,27 @@ import DialogueEleve from '@/components/fichesEleves/DialogueEleve.vue'
 
 const store = useEcoleStore()
 
+// État d'ouverture des 3 popups d'édition (cours / classe / élève).
 const dialogueCours = ref(false)
 const dialogueClasse = ref(false)
 const dialogueEleve = ref(false)
 
+// Id de l'élément en cours d'édition (null = mode création).
 const coursEnEditionId = ref<number | null>(null)
 const classeEnEditionId = ref<number | null>(null)
 const eleveEnEditionId = ref<number | null>(null)
 
+// Valeurs affichées/pré-remplies dans chaque popup.
 const nouveauCours = ref({ nom: '' })
 const nouvelleClasse = ref({ nom: '', coursIds: [] as number[] })
 const nouvelEleve = ref({ classeId: 0, nom: '', prenom: '', dateNaissance: '' })
 
+// Popup de confirmation générique, réutilisée pour les 3 types de suppression
+// (cours/classe/élève) : "actionSuppression" contient la fonction à exécuter
+// si l'utilisateur confirme.
 const dialogueConfirmation = ref(false)
 const messageConfirmation = ref('')
+//Promise... (fct async) qui ne renvoie aucune valeur
 let actionSuppression: (() => Promise<void>) | null = null
 
 const coursTries = computed(() => store.obtenirCoursTries())
@@ -115,9 +128,12 @@ function nombreClassesParCours(coursId: number) {
 }
 
 function obtenirNomCours(coursIds: number[]) {
+  //Map ne garde que la propriété
   return coursTries.value.filter(c => coursIds.includes(c.id)).map(c => c.nom).join(', ')
 }
 
+// Prépare le message de confirmation (en mentionnant l'impact si le cours
+// est utilisé dans des classes) et mémorise l'action à exécuter si confirmé.
 function demanderSuppressionCours(id: number) {
   const cours = store.cours.find(c => c.id === id)
   const nbClasses = nombreClassesParCours(id)
@@ -141,6 +157,7 @@ function demanderSuppressionEleve(id: number) {
   dialogueConfirmation.value = true
 }
 
+// Exécute l'action de suppression mémorisée, quelle qu'elle soit.
 async function confirmerSuppression() {
   if (actionSuppression) await actionSuppression()
   annulerSuppression()
@@ -152,6 +169,7 @@ function annulerSuppression() {
   actionSuppression = null
 }
 
+// Ouvre la popup cours en mode édition (si "cours" fourni) ou création.
 function ouvrirDialogueCours(cours?: Cours) {
   coursEnEditionId.value = cours?.id ?? null
   nouveauCours.value = { nom: cours?.nom ?? '' }
@@ -164,17 +182,22 @@ function fermerDialogueCours() {
   nouveauCours.value = { nom: '' }
 }
 
+// Crée ou modifie le cours. En cas de modification, on recharge aussi
+// les horaires : le nom du cours est utilisé en texte libre dans les
+// créneaux d'horaire, donc l'API a pu les mettre à jour côté serveur
+// (voir cours.routes.ts), il faut donc les recharger pour rester synchro.
 async function enregistrerCours(nom: string) {
   if (!nom.trim()) return
   if (coursEnEditionId.value) {
     await store.modifierCours(coursEnEditionId.value, nom)
-    await store.chargerHoraires() // ← recharge les horaires avec les nouveaux noms
+    await store.chargerHoraires() // recharge les horaires avec les nouveaux noms
   } else {
     await store.ajouterCours(nom)
   }
   fermerDialogueCours()
 }
 
+// Ouvre la popup classe en mode édition (si "classe" fourni) ou création.
 function ouvrirDialogueClasse(classe?: Classe) {
   classeEnEditionId.value = classe?.id ?? null
   nouvelleClasse.value = { nom: classe?.nom ?? '', coursIds: classe ? [...classe.coursIds] : [] }
@@ -194,6 +217,8 @@ async function enregistrerClasse(donnees: { nom: string; coursIds: number[] }) {
   fermerDialogueClasse()
 }
 
+// Ouvre la popup élève. Si appelée depuis le bouton "+" d'une classe
+// précise (ListeClasses), "classeId" présélectionne cette classe.
 function ouvrirDialogueEleve(eleve?: Eleve, classeId?: number) {
   eleveEnEditionId.value = eleve?.id ?? null
   nouvelEleve.value = eleve
