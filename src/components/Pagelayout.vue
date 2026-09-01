@@ -1,3 +1,9 @@
+<!--
+  Layout générique pour les pages internes : affiche un titre + sous-titre
+  en en-tête, avec un emplacement (slot "actions") pour des boutons à droite,
+  et un slot par défaut pour le contenu de la page. Utilisé pour garder
+  une mise en page cohérente sur toutes les pages.
+-->
 <template>
   <v-container class="pa-6" :class="estSombre ? 'fond-page-sombre' : 'fond-page-clair'">
 
