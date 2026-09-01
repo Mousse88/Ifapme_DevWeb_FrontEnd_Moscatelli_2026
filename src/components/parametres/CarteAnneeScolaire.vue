@@ -1,3 +1,9 @@
+<!--
+  Carte des paramètres "Année scolaire" : permet de choisir quelle année
+  consulter (parmi celles déjà créées) et de démarrer une nouvelle année
+  scolaire (avec une popup de confirmation qui exige de retaper l'année,
+  pour éviter un clic accidentel qui archiverait l'année en cours par erreur).
+-->
 <template>
   <v-card class="pa-5 carte-parametre" rounded="xl" :class="estSombre ? 'carte-sombre' : 'carte-claire'">
     <div class="d-flex align-center mb-4 ga-3">
@@ -129,9 +135,12 @@ const theme = useTheme()
 const estSombre = computed(() => theme.global.current.value.dark)
 
 const dialogueNouvelleAnnee = ref(false)
+// L'utilisateur doit retaper l'année cible pour confirmer (sécurité anti-clic accidentel).
 const confirmationTexte = ref('')
 const chargement = ref(false)
 
+// Liste des années sélectionnables dans le menu déroulant, la plus récente en premier,
+// avec un libellé "(active)" pour l'année scolaire actuellement en cours.
 const anneesDisponibles = computed(() =>
   [...store.anneesCreees]
     .sort((a, b) => b - a) // plus récente en premier
@@ -141,6 +150,7 @@ const anneesDisponibles = computed(() =>
     }))
 )
 
+// Change l'année consultée et prévient le parent pour qu'il recharge les données.
 function onChangerAnnee(annee: number) {
   store.consulterAnnee(annee)
   emit('changerAnnee')
@@ -151,6 +161,8 @@ function fermerDialogue() {
   confirmationTexte.value = ''
 }
 
+// Démarre la nouvelle année scolaire (via le store) puis prévient le parent
+// pour qu'il recharge les données fraîches de cette nouvelle année.
 async function demarrerNouvelleAnnee() {
   chargement.value = true
   try {
