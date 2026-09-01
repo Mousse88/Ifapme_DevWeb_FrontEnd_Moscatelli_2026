@@ -1,3 +1,7 @@
+<!--
+  Widget de la page d'accueil qui affiche les élèves dont c'est
+  l'anniversaire aujourd'hui, avec leur âge.
+-->
 <template>
   <v-col cols="12" md="6">
     <v-card class="pa-4" rounded="xl">
@@ -28,12 +32,16 @@ const store = useEcoleStore();
 
 const aujourdhui = new Date();
 
+// Charge la liste des élèves si elle n'est pas déjà en mémoire
+// (évite un appel API inutile si une autre page l'a déjà chargée).
 onMounted(async () => {
   if (store.eleves.length === 0) {
     await store.chargerEleves();
   }
 });
 
+// Filtre les élèves dont le jour et le mois de naissance correspondent
+// à aujourd'hui (peu importe l'année de naissance).
 const anniversairesDuJour = computed(() => {
   const jour = aujourdhui.getDate();
   const mois = aujourdhui.getMonth();
@@ -47,6 +55,9 @@ const anniversairesDuJour = computed(() => {
   });
 });
 
+// Calcule l'âge exact d'un élève à partir de sa date de naissance,
+// en tenant compte du fait que l'anniversaire n'est pas encore passé
+// dans l'année (comparaison mois/jour).
 function calculerAge(dateNaissance: string) {
   const naissance = new Date(dateNaissance);
 
