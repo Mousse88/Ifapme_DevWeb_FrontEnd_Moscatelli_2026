@@ -1,3 +1,11 @@
+<!--
+  Composant principal de la page Présences : orchestre la sélection du
+  créneau (jour/période/date), en déduit automatiquement la classe et le
+  cours correspondants via l'horaire actif, puis affiche la liste des
+  élèves pour encoder leur présence. Chaque changement de statut est
+  sauvegardé immédiatement (pas besoin de bouton "Enregistrer" explicite,
+  même si "enregistrer" reste exposé pour un usage externe éventuel).
+-->
 <template>
   <div>
     <SelectionCreneau
@@ -40,6 +48,7 @@ import ListeElevesPresences from '@/components/presences/ListeElevesPresences.vu
 
 type CodeStatut = 'P' | 'A' | 'R' | 'E' | 'X'
 
+// Tables de correspondance jour <-> index utilisées pour la logique de dates.
 const JOURS_JS: Record<number, string> = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi' }
 const JOURS_OFFSET: Record<string, number> = { 'Lundi': 0, 'Mardi': 1, 'Mercredi': 2, 'Jeudi': 3, 'Vendredi': 4 }
 
@@ -51,14 +60,17 @@ const periodeSelectionnee = ref<number | null>(null)
 const dateSelectionnee = ref<string>(aujourdHui())
 const classeIdSelectionne = ref<number | null>(null)
 const coursIdSelectionne = ref<number | null>(null)
+// Statuts encodés pour la sélection actuelle (avant/après sauvegarde côté API).
 const statutsLocaux = ref<Map<number, CodeStatut>>(new Map())
 const chargementPresences = ref(false)
 
+// L'horaire dont la période de validité couvre la date du jour.
 const horaireActif = computed(() => {
   const today = aujourdHui()
   return store.horaires.find(h => today >= h.startDate && today <= h.endDate) ?? null
 })
 
+// Le créneau (cours/classe/local) de l'horaire actif pour le jour+période sélectionnés.
 const creneauActif = computed(() => {
   if (!horaireActif.value || !jourSelectionne.value || !periodeSelectionnee.value) return null
   return horaireActif.value.slots.find(
@@ -71,6 +83,8 @@ const elevesClasse = computed(() => {
   return store.obtenirElevesParClasse(classeIdSelectionne.value)
 })
 
+// Vrai quand toutes les infos nécessaires (jour, période, classe, cours, date)
+// sont connues, ce qui déclenche l'affichage de la liste des élèves.
 const selectionComplete = computed(() =>
   !!jourSelectionne.value &&
   periodeSelectionnee.value !== null &&
@@ -87,10 +101,15 @@ const nomCoursSelectionne = computed(() =>
   store.cours.find(c => c.id === coursIdSelectionne.value)?.nom ?? ''
 )
 
+// Clé unique identifiant le créneau actuel, utilisée pour le cache du store presences.
 const cleCourante = computed(() =>
   `${classeIdSelectionne.value}-${coursIdSelectionne.value}-${dateSelectionnee.value}-${periodeSelectionnee.value}`
 )
 
+// Au montage : charge les données de base si nécessaire, puis essaie de
+// présélectionner intelligemment le jour, la période et la date courants
+// en fonction du jour et de l'heure réels (pratique : le prof arrive sur
+// la page et tombe directement sur "son" cours du moment).
 onMounted(async () => {
   if (store.classes.length === 0) await store.chargerClasses()
   if (store.cours.length === 0) await store.chargerCours()
@@ -105,11 +124,14 @@ onMounted(async () => {
       )
     : []
 
+  // Présélectionne le jour actuel s'il a des cours, sinon le premier jour disponible.
   if (jourNom && joursDisponibles.includes(jourNom)) jourSelectionne.value = jourNom
   else if (joursDisponibles.length > 0) jourSelectionne.value = joursDisponibles[0]
 
   mettreAJourDateSelonJour(jourSelectionne.value)
 
+  // Essaie de présélectionner la période correspondant à l'heure actuelle,
+  // uniquement si un cours y est effectivement prévu.
   const maintenant = heureActuelle()
   const periodeAuto = Object.entries(PERIODES_HEURES).find(([, h]) => maintenant >= h.debut && maintenant <= h.fin)
   if (periodeAuto && horaireActif.value) {
@@ -118,6 +140,7 @@ onMounted(async () => {
     if (existe) periodeSelectionnee.value = num
   }
 
+  // Une fois le créneau connu, en déduit automatiquement la classe et le cours associés.
   if (creneauActif.value) {
     const classeMatch = store.classes.find(c => c.nom === creneauActif.value!.classe)
     const coursMatch = store.cours.find(c => c.nom === creneauActif.value!.cours)
@@ -126,6 +149,8 @@ onMounted(async () => {
   }
 })
 
+// Si l'utilisateur change manuellement le jour/période (via SelectionCreneau),
+// on redéduit automatiquement la classe/cours à partir du nouveau créneau.
 watch(creneauActif, (creneau) => {
   if (!creneau) return
   const classeMatch = store.classes.find(c => c.nom === creneau.classe)
@@ -134,16 +159,22 @@ watch(creneauActif, (creneau) => {
   if (coursMatch) coursIdSelectionne.value = coursMatch.id
 })
 
+// Dès que la sélection devient complète, on charge les présences déjà
+// enregistrées pour ce créneau (si elles existent).
 watch(selectionComplete, async (complete) => {
   if (!complete) return
   await chargerDepuisApi()
 })
 
+// Si la clé du créneau change (nouvelle date, nouvelle période...), on recharge.
 watch(cleCourante, async () => {
   if (!selectionComplete.value) return
   await chargerDepuisApi()
 })
 
+// Va chercher les présences déjà enregistrées pour le créneau courant
+// (via le store presences, qui gère lui-même son cache) et les convertit
+// en Map(eleveId -> statut) pour un accès facile côté template.
 async function chargerDepuisApi() {
   if (!classeIdSelectionne.value || !coursIdSelectionne.value || !periodeSelectionnee.value) return
   statutsLocaux.value = new Map()
@@ -169,6 +200,9 @@ async function chargerDepuisApi() {
   }
 }
 
+// Sauvegarde les statuts actuellement encodés. Si tout a été effacé
+// (aucun statut restant), on supprime carrément le créneau côté serveur
+// plutôt que d'y laisser une liste vide.
 async function sauvegarderMaintenant() {
   if (!selectionComplete.value) return
   if (statutsLocaux.value.size === 0) {
@@ -183,6 +217,9 @@ async function sauvegarderMaintenant() {
   }
 }
 
+// Calcule automatiquement la date correspondant au jour de la semaine
+// choisi (ex: si on sélectionne "Mercredi", on prend le mercredi de la
+// semaine en cours) pour éviter d'avoir à saisir la date manuellement.
 function mettreAJourDateSelonJour(jour: string) {
   if (!jour || JOURS_OFFSET[jour] === undefined) return
   const aujourd = new Date()
@@ -195,6 +232,8 @@ function mettreAJourDateSelonJour(jour: string) {
   dateSelectionnee.value = `${cible.getFullYear()}-${String(cible.getMonth() + 1).padStart(2, '0')}-${String(cible.getDate()).padStart(2, '0')}`
 }
 
+// Quand l'utilisateur change de jour manuellement : réinitialise la
+// période/classe/cours (qui ne sont plus valables) et recalcule la date.
 async function onJourChange(jour: string) {
   jourSelectionne.value = jour
   periodeSelectionnee.value = null
@@ -203,6 +242,8 @@ async function onJourChange(jour: string) {
   mettreAJourDateSelonJour(jour)
 }
 
+// Change le statut d'un élève (ou le retire si on reclique sur le même
+// statut, cf logique dans ListeElevesPresences) et sauvegarde immédiatement.
 async function definirStatut(eleveId: number, statut: CodeStatut | null) {
   const map = new Map(statutsLocaux.value)
   if (statut === null) map.delete(eleveId)
@@ -211,6 +252,8 @@ async function definirStatut(eleveId: number, statut: CodeStatut | null) {
   await sauvegarderMaintenant()
 }
 
+// Applique le même statut à tous les élèves de la classe d'un coup
+// (raccourci "Tous P" / "Tous A").
 async function toutMettre(statut: CodeStatut) {
   const map = new Map<number, CodeStatut>()
   for (const eleve of elevesClasse.value) map.set(eleve.id, statut)
@@ -218,10 +261,13 @@ async function toutMettre(statut: CodeStatut) {
   await sauvegarderMaintenant()
 }
 
+// Exposé au composant parent (via defineExpose) pour permettre une
+// sauvegarde manuelle explicite si besoin (ex: avant de changer de page).
 async function enregistrer() {
   await sauvegarderMaintenant()
 }
 
+// Heure actuelle au format "HH:MM", utilisée pour la présélection automatique de période.
 function heureActuelle(): string {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
