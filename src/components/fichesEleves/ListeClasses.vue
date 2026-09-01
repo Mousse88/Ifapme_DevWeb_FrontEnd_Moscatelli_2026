@@ -1,3 +1,10 @@
+<!--
+  Liste des classes sous forme de cartes repliables : chaque carte affiche
+  le nom de la classe, ses cours, le nombre d'élèves, et peut se déplier
+  pour montrer la liste des élèves avec actions modifier/supprimer.
+  Toutes les cartes fermées ont la même hauteur (calculée dynamiquement
+  à partir de la plus grande en-tête), pour un alignement visuel propre.
+-->
 <template>
   <section>
     <h2 class="titre-section">🏫 Mes classes</h2>
@@ -81,31 +88,45 @@ defineEmits<{
   (e: 'supprimer-eleve', eleveId: number): void
 }>()
 
+// Référence vers le conteneur DOM de toute la grille de cartes,
+// utilisée pour y attacher un ResizeObserver (voir plus bas).
 const grilleRef = ref<HTMLElement | null>(null)
+
+// Hauteur commune (en px) appliquée à toutes les cartes fermées.
 const hauteurFermee = ref(0)
 
-// Map classeId → élément DOM de l'en-tête
+// Map classeId : élément DOM de l'en-tête (utilisée pour mesurer chaque en-tête)
 const entetes = new Map<number, HTMLElement>()
 
+// Callback de la prop "ref" dynamique sur chaque en-tête de carte :
+// enregistre (ou retire) l'élément DOM correspondant dans la map.
 function enregistrerEntete(el: unknown, classeId: number) {
   if (el instanceof HTMLElement) entetes.set(classeId, el)
   else entetes.delete(classeId)
 }
 
-// On mesure uniquement la hauteur de l'en-tête (padding carte inclus = +36px pour padding top+bottom)
+// Mesure de la hauteur de l'en-tête (padding carte inclus = +36px pour padding top+bottom)
 const PADDING_CARTE = 36
 
+// Recalcule la hauteur "fermée" commune = la hauteur de la plus grande
+// en-tête parmi toutes les classes (pour que toutes les cartes fermées
+// aient la même taille, même si les contenus diffèrent en longueur).
 async function recalculerHauteur() {
   await nextTick()
   let max = 0
+  //Pas besoin de class.ID => [, el]
   for (const [, el] of entetes) {
     max = Math.max(max, el.offsetHeight + PADDING_CARTE)
   }
   if (max > 0) hauteurFermee.value = max
 }
 
+// Recalcule si la liste de classes change (ajout/suppression/modif de nom).
 watch(() => props.classes, () => recalculerHauteur())
 
+// ResizeObserver : recalcule aussi si la taille de la grille change
+// (ex: redimensionnement de la fenêtre, qui peut changer le texte sur
+// plusieurs lignes et donc la hauteur des en-têtes).
 let ro: ResizeObserver | null = null
 onMounted(() => {
   recalculerHauteur()
