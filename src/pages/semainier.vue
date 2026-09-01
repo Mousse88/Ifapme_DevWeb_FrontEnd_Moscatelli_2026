@@ -1,3 +1,10 @@
+<!--
+  Page Semainier : affiche l'horaire de la semaine sélectionnée (navigation
+  semaine précédente/suivante), avec un champ de note libre par créneau
+  pour noter ce qui a été fait ce jour-là. Peut être ouverte directement
+  sur une semaine précise via un paramètre d'URL "date" (utilisé par le
+  lien "aller à cette semaine" du calendrier annuel).
+-->
 <template>
   <PageLayout titre="📅 Semainier" sous-titre="Planning hebdomadaire de cours">
     <template #actions>
@@ -52,10 +59,17 @@ const theme = useTheme()
 
 const estSombre = computed(() => theme.global.current.value.dark)
 
+// Date "de référence" servant à calculer la semaine affichée (n'importe
+// quel jour de cette semaine-là, peu importe lequel).
 const dateActuelle = ref(new Date())
+// Notes du semainier affichées, indexées par "jour-periode" (ex: "Lundi-3").
 const notes = ref<Record<string, string>>({})
 const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
 
+// Au montage : si un paramètre "date" est présent dans l'URL (venant du
+// calendrier annuel), on l'utilise comme semaine de départ. On corrige le
+// décalage de fuseau horaire pour que "new Date('2026-05-04')" représente
+// bien le 4 mai en heure locale et pas la veille.
 onMounted(async () => {
   if (route.query.date) {
     const d = new Date(route.query.date as string)
@@ -67,6 +81,7 @@ onMounted(async () => {
   chargerNotesAffichees()
 })
 
+// Renvoie le lundi de la semaine contenant la date donnée.
 function obtenirLundi(date: Date) {
   const d = new Date(date)
   const jour = d.getDay()
@@ -74,6 +89,7 @@ function obtenirLundi(date: Date) {
   return d
 }
 
+// Les 5 jours (Lundi à Vendredi) de la semaine actuellement affichée.
 const joursSemaine = computed(() => {
   const lundi = obtenirLundi(dateActuelle.value)
   return Array.from({ length: 5 }, (_, i) => {
@@ -83,6 +99,8 @@ const joursSemaine = computed(() => {
   })
 })
 
+// Map "nom du jour" -> date ISO correspondante pour la semaine affichée
+// (utilisée pour afficher les dates sous les noms de jours dans le tableau).
 const datesJours = computed(() =>
   jours.reduce<Record<string, string>>((res, jour, i) => {
     res[jour] = convertirDateIso(joursSemaine.value[i])
@@ -90,17 +108,23 @@ const datesJours = computed(() =>
   }, {})
 )
 
+// L'horaire dont la période de validité couvre au moins un jour de la
+// semaine affichée.
 const horaire = computed(() => {
   const debut = convertirDateIso(joursSemaine.value[0])
   const fin = convertirDateIso(joursSemaine.value[4])
   return store.horaires.find(h => h.startDate <= fin && h.endDate >= debut) ?? null
 })
 
+// Recharge les notes affichées si on change de semaine ou d'horaire.
 watch(
   () => [horaire.value?.id, convertirDateIso(joursSemaine.value[0])],
   () => chargerNotesAffichees()
 )
 
+// Va chercher, pour chaque créneau (jour x période) de la semaine, la note
+// déjà enregistrée dans le store et la place dans l'objet "notes" utilisé
+// par le tableau (clé "jour-periode").
 function chargerNotesAffichees() {
   if (!horaire.value) { notes.value = {}; return }
   const nouvellesNotes: Record<string, string> = {}
@@ -114,6 +138,9 @@ function chargerNotesAffichees() {
   notes.value = nouvellesNotes
 }
 
+// Reçoit le nouvel état complet des notes depuis TableauHoraire (v-model),
+// et ne sauvegarde vers l'API que les notes qui ont réellement changé
+// (comparaison avec l'ancien état) pour éviter des appels inutiles.
 async function mettreAJourNotes(nouvellesNotes: Record<string, string>) {
   if (!horaire.value) return
   const anciennes = notes.value
@@ -146,6 +173,7 @@ function semaineSuivante() {
   dateActuelle.value = d
 }
 
+// Formate une date en "JJ/MM" pour l'affichage du libellé "Semaine du ... au ...".
 function formaterDateCourte(date: Date) {
   return date.toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit' })
 }
