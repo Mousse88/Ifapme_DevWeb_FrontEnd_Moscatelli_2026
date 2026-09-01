@@ -1,3 +1,8 @@
+<!--
+  Page/section récapitulative des présences : choix classe + cours + période,
+  puis tableau récapitulatif du nombre de P/A/R/E/X par élève sur la
+  période choisie (ou sur toute l'année si "Annuel" est sélectionné).
+-->
 <template>
   <div>
     <v-card class="mb-5" :class="estSombre ? 'carte-sombre' : 'carte-claire'" elevation="2">
@@ -140,6 +145,7 @@ const classeIdSelectionne = ref<number | null>(null)
 const coursIdSelectionne = ref<number | null>(null)
 const periodeSelectionnee = ref<Periode>(parametres.periodeActive)
 const chargement = ref(false)
+// Toutes les présences (non filtrées) récupérées de l'API pour la classe/cours choisis.
 const presencesApi = ref<PresenceBackend[]>([])
 
 const optionsPeriodes = computed(() => [
@@ -151,6 +157,7 @@ const optionsPeriodes = computed(() => [
 
 const classes = computed(() => store.obtenirClassesTries())
 
+// Ne propose que les cours réellement associés à la classe sélectionnée.
 const coursDisponibles = computed(() => {
   if (!classeIdSelectionne.value) return []
   const classe = store.classes.find(c => c.id === classeIdSelectionne.value)
@@ -175,20 +182,28 @@ const elevesClasse = computed(() => {
   return store.obtenirElevesParClasse(classeIdSelectionne.value)
 })
 
+// Filtre les présences chargées selon la période choisie
+// ("annuel" = toutes les périodes confondues).
 const presencesFiltrees = computed(() => {
   if (periodeSelectionnee.value === 'annuel') return presencesApi.value
   return presencesApi.value.filter(p => Number(p.periodeCotation) === Number(periodeSelectionnee.value))
 })
 
+// Nombre de jours de cours distincts encodés (on exclut le statut "X" =
+// activité, qui ne compte pas comme un cours normal donné).
 const totalCours = computed(() => {
-  const datesAvecCours = new Set(
+  const creneauxAvecCours = new Set(
     presencesFiltrees.value
       .filter(p => p.statut !== 'X')
-      .map(p => p.date)
+      .map(p => `${p.date}-${p.periode}`)
   )
-  return datesAvecCours.size
+  return creneauxAvecCours.size
 })
 
+// Charge toutes les présences enregistrées pour la classe/cours choisis
+// (toutes périodes confondues : le filtrage par période se fait ensuite
+// côté front dans presencesFiltrees, pour éviter de re-fetcher à chaque
+// changement de période).
 async function chargerPresences() {
   if (!selectionComplete.value) return
   chargement.value = true
@@ -203,14 +218,18 @@ async function chargerPresences() {
   }
 }
 
+// Recharge automatiquement dès que la classe ou le cours sélectionné change.
 watch([classeIdSelectionne, coursIdSelectionne], async () => {
   await chargerPresences()
 })
 
+// Exposé au parent pour permettre un rechargement manuel (ex: après avoir
+// encodé de nouvelles présences ailleurs dans l'app).
 async function recharger() {
   await chargerPresences()
 }
 
+// Compte le nombre de fois qu'un élève a eu un statut donné dans la sélection filtrée.
 function compterPourEleve(eleveId: number, statut: CodeStatut): number {
   return presencesFiltrees.value.filter(p => p.eleveId === eleveId && p.statut === statut).length
 }
