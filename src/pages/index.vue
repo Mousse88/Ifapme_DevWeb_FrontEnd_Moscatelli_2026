@@ -1,3 +1,8 @@
+<!--
+  Page d'accueil : assemble simplement les différents widgets du dashboard
+  (mini-calendrier, prochains événements, horaire du jour, congés,
+  anniversaires). Chaque widget gère lui-même le chargement de ses données.
+-->
 <template>
   <PageLayout titre="Accueil">
     <v-row>
