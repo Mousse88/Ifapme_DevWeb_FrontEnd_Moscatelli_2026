@@ -1,3 +1,8 @@
+<!--
+  Liste des élèves d'une classe pour l'encodage des présences à un créneau
+  précis : un bouton de statut (P/A/R/E/X) par élève, avec un récapitulatif
+  du nombre d'élèves par statut en en-tête, et des raccourcis "Tous P"/"Tous A".
+-->
 <template>
   <v-card :class="estSombre ? 'carte-sombre' : 'carte-claire'" elevation="2">
     <v-card-title class="pa-5 pb-3">
@@ -70,6 +75,8 @@ import { formaterDate } from '@/composables/utiliserDate'
 
 type CodeStatut = 'P' | 'A' | 'R' | 'E' | 'X'
 
+// Les 5 statuts possibles, avec leur libellé complet (affiché en infobulle
+// sur chaque bouton de la liste).
 const STATUTS: { code: CodeStatut; label: string }[] = [
   { code: 'P', label: 'Présent' },
   { code: 'A', label: 'Absent' },
@@ -97,10 +104,13 @@ defineEmits<{
 const theme = useTheme()
 const estSombre = computed(() => theme.global.current.value.dark)
 
+// Renvoie le statut actuellement encodé pour un élève (null = pas encore encodé).
 function statutEleve(eleveId: number): CodeStatut | null {
   return props.statutsMap.get(eleveId) ?? null
 }
 
+// Compte combien d'élèves ont un statut donné (pour les badges récapitulatifs
+// "P 18", "A 2", etc. en en-tête).
 function compteStatut(statut: CodeStatut): number {
   let n = 0
   props.statutsMap.forEach(s => { if (s === statut) n++ })
