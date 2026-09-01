@@ -1,282 +1,181 @@
 <!--
-  Affiche un mois complet du calendrier sous forme de tableau (semaines x
-  jours). Utilisé à la fois en grand format (page calendrier annuel, avec
-  liste des événements par jour) et en format compact (widget accueil,
-  juste un point de couleur par jour avec événement).
+  Étape 2 du cahier de cotes, pour une classe donnée :
+  - si période = "annuel" -> affiche un tableau récapitulatif par cours,
+    avec les moyennes des 3 périodes + moyenne annuelle (accordéon par cours)
+  - sinon -> affiche d'abord une grille de choix de cours, puis une fois
+    le cours choisi, délègue l'affichage détaillé à TableauCotes.
 -->
 <template>
-  <v-col cols="12" :md="compact ? 6 : 4" class="mb-4">
-    <div class="carte-mois" :class="{ compacte: compact }">
-      <div class="entete-mois">
-        {{ mois.nom }}
+  <div>
+    <div v-if="coursSelectionneId || periode === 'annuel'" class="mb-4">
+      <BoutonApp variante="secondary" @click="retourAuxCours">← Retour aux cours</BoutonApp>
+    </div>
+
+    <!-- Grille de sélection du cours (uniquement si aucun cours choisi et hors vue annuelle) -->
+    <div v-if="!coursSelectionneId && periode !== 'annuel'" class="mb-6">
+      <h2 class="text-h5 font-weight-bold mb-4">Choisis un cours</h2>
+
+      <div v-if="cours.length === 0" class="text-medium-emphasis">
+        Aucun cours associé à cette classe.
       </div>
 
-      <table class="tableau-mois">
-        <thead>
-          <tr>
-            <th v-if="!compact" class="colonne-semaine"></th>
-
-            <th
-              v-for="jour in nomsJours"
-              :key="jour"
-              :class="{ weekend: jour === 'Sam' || jour === 'Dim' }"
-            >
-              {{ compact ? jour.slice(0, 2) : jour }}
-            </th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr
-            v-for="(semaine, indexSemaine) in mois.semaines"
-            :key="indexSemaine"
-          >
-            <!-- Coche cliquable en début de ligne pour aller directement
-                 au semainier de cette semaine (mode non-compact uniquement) -->
-            <td v-if="!compact" class="marqueur-semaine">
-              <span
-                v-if="semaine.estSemaineCours"
-                class="clic-semaine"
-                @click="$emit('aller-semaine', semaine.premierJour)"
-              >
-                ✔
-              </span>
-            </td>
-
-            <td
-              v-for="(cellule, indexJour) in semaine.jours"
-              :key="indexJour"
-              :class="[
-                'cellule-jour',
-                { weekend: indexJour >= 5 },
-                { 'autre-mois': cellule && !cellule.moisActuel },
-                {
-                  'avec-evenement':
-                    cellule && evenementsPourDate(cellule.date).length > 0,
-                },
-                { 'aujourd-hui': cellule && cellule.date === dateAujourdhui },
-              ]"
-            >
-              <div v-if="cellule" class="contenu-jour">
-                <div class="numero-jour">
-                  {{
-                    compact
-                      ? cellule.jour
-                      : String(cellule.jour).padStart(2, "0")
-                  }}
-                </div>
-
-                <!-- Mode normal : liste des pastilles d'événements du jour,
-                     cliquables pour ouvrir la popup de modification ;
-                     l'infobulle (au survol) affiche le détail complet. -->
-                <div v-if="!compact" class="liste-evenements">
-                  <div
-                    v-for="evenement in evenementsPourDate(cellule.date)"
-                    :key="evenement.id"
-                    class="pastille-evenement"
-                    :style="{ backgroundColor: evenement.couleur || '#10b981' }"
-                    @click.stop="$emit('modifier-evenement', evenement)"
-                  >
-                    <span class="texte-evenement">
-                      {{ evenement.titre }}
-                    </span>
-
-                    <div class="infobulle-evenement">
-                      {{ titreEvenement(evenement) }}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Mode compact : juste un petit point coloré (couleur du
-                     premier événement du jour) pour indiquer une activité. -->
-                <div
-                  v-else-if="evenementsPourDate(cellule.date).length > 0"
-                  class="point-evenement"
-                  :style="{ backgroundColor: evenementsPourDate(cellule.date)[0].couleur || '#10b981' }"
-                />
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-else class="grille">
+        <v-card
+          v-for="coursItem in cours"
+          :key="coursItem.id"
+          class="pa-4 rounded-xl elevation-2 carte-tuile curseur"
+          @click="coursSelectionneId = coursItem.id"
+        >
+          <div class="text-h6 font-weight-bold">{{ coursItem.nom }}</div>
+        </v-card>
+      </div>
     </div>
-  </v-col>
+
+    <!-- Vue annuelle : un accordéon par cours, dépliable pour voir le détail des moyennes -->
+    <div v-if="periode === 'annuel'">
+      <h2 class="text-h5 font-weight-bold mb-6">Aperçu annuel</h2>
+
+      <div v-if="cours.length === 0" class="text-medium-emphasis">
+        Aucun cours associé à cette classe.
+      </div>
+
+      <div v-else class="d-flex flex-column ga-4">
+        <v-card v-for="coursItem in cours" :key="coursItem.id" class="rounded-xl elevation-2">
+          <div class="entete-cours pa-4" @click="toggleCours(coursItem.id)">
+            <span class="text-h6 font-weight-bold">{{ coursItem.nom }}</span>
+            <v-icon class="chevron" :class="{ 'chevron-ouvert': estOuvert(coursItem.id) }">
+              mdi-chevron-down
+            </v-icon>
+          </div>
+
+          <v-expand-transition>
+            <div v-if="estOuvert(coursItem.id)">
+              <v-divider />
+              <div v-if="elevesClasse.length === 0" class="pa-4 text-medium-emphasis">
+                Aucun élève dans cette classe.
+              </div>
+              <v-table v-else class="rounded-b-xl">
+                <thead>
+                  <tr>
+                    <th>Élève</th>
+                    <th class="text-center">Période 1</th>
+                    <th class="text-center">Période 2</th>
+                    <th class="text-center">Période 3</th>
+                    <th class="text-center">Annuel /20</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="eleve in elevesClasse" :key="`${coursItem.id}-${eleve.id}`">
+                    <td class="font-weight-medium">{{ eleve.nom }} {{ eleve.prenom }}</td>
+                    <td class="text-center">{{ calculerMoyenneParPeriode(proprietes.classeId, coursItem.id, 1, eleve.id) }}</td>
+                    <td class="text-center">{{ calculerMoyenneParPeriode(proprietes.classeId, coursItem.id, 2, eleve.id) }}</td>
+                    <td class="text-center">{{ calculerMoyenneParPeriode(proprietes.classeId, coursItem.id, 3, eleve.id) }}</td>
+                    <td class="text-center font-weight-bold">{{ calculerMoyenneAnnuelle(proprietes.classeId, coursItem.id, eleve.id) }}</td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </div>
+          </v-expand-transition>
+        </v-card>
+      </div>
+    </div>
+
+    <!-- Une fois un cours choisi (hors vue annuelle), on affiche le tableau
+         de cotes détaillé et éditable pour ce cours. -->
+    <TableauCotes
+      v-if="coursSelectionneId && periode !== 'annuel'"
+      :classe-id="classeId"
+      :cours-id="coursSelectionneId"
+      :periode="periode as number"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
-import type { EvenementCalendrier } from "@/stores/ecole";
-import type { MoisCalendrier } from "@/composables/utiliserCalendrier";
-import { aujourdHui } from "@/composables/utiliserDate";
+import { computed, ref, watch } from 'vue'
+import { useEcoleStore, type Cours } from '@/stores/ecole'
+import { utiliserCotes } from '@/composables/utiliserCotes'
+import BoutonApp from '@/components/BoutonApp.vue'
+import TableauCotes from '@/components/cahierCotes/TableauCotes.vue'
 
-// "evenementsPourDate" et "titreEvenement" sont passées par le parent
-// (déjà branchées sur le composable utiliserCalendrier), ce composant
-// reste donc purement "présentation".
-withDefaults(
-  defineProps<{
-    mois: MoisCalendrier;
-    nomsJours: string[];
-    evenementsPourDate: (date: string) => EvenementCalendrier[];
-    titreEvenement: (evenement: EvenementCalendrier) => string;
-    compact?: boolean;
-  }>(),
-  {
-    compact: false,
-  },
-);
+type PeriodeValeur = number | 'annuel'
 
-const dateAujourdhui = aujourdHui();
+const proprietes = defineProps<{
+  classeId: number
+  periode: PeriodeValeur
+  cours: Cours[]
+}>()
 
-// "aller-semaine" -> demande au parent de naviguer vers le semainier de cette semaine
-// "modifier-evenement" -> demande au parent d'ouvrir la popup d'édition de cet événement
-defineEmits<{
-  (e: "aller-semaine", date: Date): void;
-  (e: "modifier-evenement", evenement: EvenementCalendrier): void;
-}>();
+// Émis quand on clique "Retour aux cours" alors qu'on est en vue annuelle,
+// pour permettre au parent de revenir à la sélection de période.
+const emit = defineEmits<{ (e: 'retour-periode'): void }>()
+
+const store = useEcoleStore()
+const { calculerMoyenneParPeriode, calculerMoyenneAnnuelle } = utiliserCotes()
+
+const coursSelectionneId = ref<number | null>(null)
+const elevesClasse = computed(() => store.obtenirElevesParClasse(proprietes.classeId))
+
+// Garde en mémoire quels accordéons de cours sont ouverts dans la vue annuelle.
+const coursOuverts = ref<Set<number>>(new Set())
+
+function estOuvert(coursId: number): boolean {
+  return coursOuverts.value.has(coursId)
+}
+
+function toggleCours(coursId: number) {
+  const s = new Set(coursOuverts.value)
+  if (s.has(coursId)) s.delete(coursId)
+  else s.add(coursId)
+  coursOuverts.value = s
+}
+
+// Si on change de classe, on repart de zéro : aucun cours sélectionné,
+// tous les accordéons refermés.
+watch(() => proprietes.classeId, () => {
+  coursSelectionneId.value = null
+  coursOuverts.value = new Set()
+})
+
+// Si on bascule vers la vue annuelle, on désélectionne le cours en cours
+// (pour éviter d'afficher TableauCotes en même temps que la vue annuelle).
+watch(() => proprietes.periode, (p) => {
+  if (p === 'annuel') {
+    coursSelectionneId.value = null
+    coursOuverts.value = new Set()
+  }
+})
+
+// Retour à la grille de choix des cours. Si on était en vue annuelle,
+// on prévient le parent pour qu'il revienne à la sélection de période.
+function retourAuxCours() {
+  coursSelectionneId.value = null
+  if (proprietes.periode === 'annuel') emit('retour-periode')
+}
 </script>
 
 <style scoped>
-.carte-mois {
-  border-radius: 16px;
-  overflow: visible;
-  background: white !important;
-  color: #111827 !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-  transition: 0.2s;
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
 }
+.carte-tuile { transition: all 0.2s ease; }
+.carte-tuile:hover { transform: translateY(-2px); }
+.curseur { cursor: pointer; }
 
-.entete-mois {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white !important;
-  text-align: center;
-  padding: 10px;
-  font-weight: bold;
-}
-
-.tableau-mois {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-  background: white !important;
-  color: #111827 !important;
-}
-
-.tableau-mois th {
-  background: #d1fae5;
-  color: #111827 !important;
-  padding: 6px;
-  font-size: 0.75rem;
-  text-align: center;
-}
-
-.tableau-mois th.weekend {
-  background: #f97316;
-  color: white !important;
-}
-
-.colonne-semaine { width: 24px; }
-
-.marqueur-semaine {
-  text-align: center;
-  background: #ecfdf5;
-  color: #111827 !important;
-  font-size: 0.75rem;
-}
-
-.cellule-jour {
-  text-align: center;
-  padding: 4px;
-  background: white !important;
-  color: #111827 !important;
-  height: 54px;
-  max-height: 54px;
-  vertical-align: top;
-  position: relative;
-  overflow: visible;
-  z-index: 1;
-}
-
-.cellule-jour.weekend { background: #fed7aa !important; color: #111827 !important; }
-.cellule-jour.autre-mois { opacity: 0.4; }
-.cellule-jour.aujourd-hui {
-  background: #10b981 !important;
-  color: white !important;
-  border-radius: 8px;
-  font-weight: bold;
-}
-
-.cellule-jour:hover {
-  z-index: 100;
-}
-.cellule-jour.avec-evenement { box-shadow: inset 0 0 0 2px #10b981; }
-
-.contenu-jour { position: relative; height: 100%; min-width: 0; }
-.numero-jour { font-size: 0.75rem; font-weight: 700; color: #111827 !important; }
-
-.liste-evenements {
-  margin-top: 2px;
+.entete-cours {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 24px;
-  overflow: visible;
-}
-
-.pastille-evenement {
-  position: relative;
-  font-size: 0.58rem;
-  line-height: 1;
-  padding: 2px 3px;
-  border-radius: 6px;
-  color: white !important;
+  justify-content: space-between;
+  align-items: center;
   cursor: pointer;
-  min-width: 0;
-  max-width: 100%;
+  user-select: none;
+  border-radius: inherit;
+  transition: background 0.15s;
 }
+.entete-cours:hover { background: rgba(0, 0, 0, 0.04); }
 
-.texte-evenement {
-  display: block;
-  color: white !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.infobulle-evenement {
-  display: none;
-  position: absolute;
-  z-index: 100;
-  left: 50%;
-  bottom: 125%;
-  transform: translateX(-50%);
-  min-width: 170px;
-  max-width: 260px;
-  background: #111827;
-  color: white !important;
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  line-height: 1.2;
-  white-space: normal;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
-  pointer-events: none;
-}
-
-.pastille-evenement:hover { filter: brightness(0.9); }
-.pastille-evenement:hover .infobulle-evenement { display: block; }
-
-.point-evenement {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  position: absolute;
-  bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.clic-semaine { cursor: pointer; color: #111827 !important; }
-.clic-semaine:hover { transform: scale(1.1); }
-
-.compacte .cellule-jour { height: 42px; max-height: 42px; }
-.compacte .entete-mois { font-size: 0.95rem; }
+.chevron { transition: transform 0.25s ease; }
+.chevron-ouvert { transform: rotate(180deg); }
 </style>
+
