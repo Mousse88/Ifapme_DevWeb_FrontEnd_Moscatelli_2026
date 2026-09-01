@@ -1,3 +1,9 @@
+<!--
+  Affiche un mois complet du calendrier sous forme de tableau (semaines x
+  jours). Utilisé à la fois en grand format (page calendrier annuel, avec
+  liste des événements par jour) et en format compact (widget accueil,
+  juste un point de couleur par jour avec événement).
+-->
 <template>
   <v-col cols="12" :md="compact ? 6 : 4" class="mb-4">
     <div class="carte-mois" :class="{ compacte: compact }">
@@ -25,6 +31,8 @@
             v-for="(semaine, indexSemaine) in mois.semaines"
             :key="indexSemaine"
           >
+            <!-- Coche cliquable en début de ligne pour aller directement
+                 au semainier de cette semaine (mode non-compact uniquement) -->
             <td v-if="!compact" class="marqueur-semaine">
               <span
                 v-if="semaine.estSemaineCours"
@@ -58,6 +66,9 @@
                   }}
                 </div>
 
+                <!-- Mode normal : liste des pastilles d'événements du jour,
+                     cliquables pour ouvrir la popup de modification ;
+                     l'infobulle (au survol) affiche le détail complet. -->
                 <div v-if="!compact" class="liste-evenements">
                   <div
                     v-for="evenement in evenementsPourDate(cellule.date)"
@@ -76,6 +87,8 @@
                   </div>
                 </div>
 
+                <!-- Mode compact : juste un petit point coloré (couleur du
+                     premier événement du jour) pour indiquer une activité. -->
                 <div
                   v-else-if="evenementsPourDate(cellule.date).length > 0"
                   class="point-evenement"
@@ -95,6 +108,9 @@ import type { EvenementCalendrier } from "@/stores/ecole";
 import type { MoisCalendrier } from "@/composables/utiliserCalendrier";
 import { aujourdHui } from "@/composables/utiliserDate";
 
+// "evenementsPourDate" et "titreEvenement" sont passées par le parent
+// (déjà branchées sur le composable utiliserCalendrier), ce composant
+// reste donc purement "présentation".
 withDefaults(
   defineProps<{
     mois: MoisCalendrier;
@@ -110,6 +126,8 @@ withDefaults(
 
 const dateAujourdhui = aujourdHui();
 
+// "aller-semaine" -> demande au parent de naviguer vers le semainier de cette semaine
+// "modifier-evenement" -> demande au parent d'ouvrir la popup d'édition de cet événement
 defineEmits<{
   (e: "aller-semaine", date: Date): void;
   (e: "modifier-evenement", evenement: EvenementCalendrier): void;
