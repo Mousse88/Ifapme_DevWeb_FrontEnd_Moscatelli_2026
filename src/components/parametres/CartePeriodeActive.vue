@@ -1,3 +1,8 @@
+<!--
+  Carte des paramètres "Période active" : 3 gros boutons pour choisir
+  quelle période de cotation (1, 2 ou 3) est actuellement active dans
+  toute l'application (cahier de cotes, présences...).
+-->
 <template>
   <v-card class="pa-5 carte-parametre" rounded="xl" :class="estSombre ? 'carte-sombre' : 'carte-claire'">
     <div class="d-flex align-center mb-4 ga-3">
