@@ -1,3 +1,7 @@
+<!--
+  Page de connexion : simple formulaire username/mot de passe qui
+  appelle le store auth, puis redirige vers l'accueil en cas de succès.
+-->
 <template>
   <PageLayout titre="Connexion">
     <div class="d-flex align-center justify-center login-zone">
@@ -36,6 +40,9 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
+// Tente la connexion via le store auth ; en cas d'échec (identifiants
+// incorrects ou erreur réseau), affiche un message générique plutôt que
+// l'erreur brute (pour ne pas révéler si c'est le user ou le mot de passe qui cloche).
 async function submit() {
   error.value = ''
   loading.value = true
