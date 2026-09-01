@@ -1,3 +1,6 @@
+<!--
+  Popup simple de création/modification d'un cours : un seul champ, le nom.
+-->
 <template>
   <v-dialog
     :model-value="modeleOuvert"
@@ -46,11 +49,15 @@ defineEmits<{
 
 const coursLocal = reactive({ nom: '' })
 
+// À l'ouverture : si on édite un cours existant, on pré-remplit avec son nom,
+// sinon (création) on part d'un champ vide.
 watch(() => proprietes.modeleOuvert, (ouvert) => {
   if (!ouvert) return
   coursLocal.nom = proprietes.coursEnEditionId ? proprietes.nomCours : ''
 })
 
+// Si le nom du cours en édition change côté parent (ex: rechargement),
+// on garde le champ local synchronisé.
 watch(() => proprietes.nomCours, (nouveauNom) => {
   if (proprietes.coursEnEditionId) coursLocal.nom = nouveauNom
 })
