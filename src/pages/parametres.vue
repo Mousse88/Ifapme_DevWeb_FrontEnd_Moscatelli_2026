@@ -1,3 +1,8 @@
+<!--
+  Page Paramètres : assemble les deux cartes de configuration
+  (Année scolaire + Période active), avec un petit message de confirmation
+  (snackbar) affiché après une action réussie.
+-->
 <template>
   <PageLayout titre="⚙️ Paramètres" sous-titre="Configuration de l'année scolaire et des périodes">
 
